@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vayune — Architecture of Air</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,400&family=Hanken+Grotesk:wght@300;400;500;600&family=Space+Mono:wght@400&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    /* --- Palette: atmospheric / "air" --- */
+    --mist:      #F4F2EC;   /* warm paper-white background           */
+    --mist-deep: #E7E6DD;   /* slightly deeper panel                  */
+    --ink:       #16191D;   /* near-black text                        */
+    --slate:     #5C6670;   /* muted secondary text                   */
+    --altitude:  #9FBBD0;   /* high-altitude sky blue                 */
+    --dawn:      #C29A55;   /* refined gold — carried over from brand */
+    --line:      rgba(22,25,29,0.12);
+
+    --display: "Fraunces", Georgia, serif;
+    --body: "Hanken Grotesk", system-ui, sans-serif;
+    --mono: "Space Mono", ui-monospace, monospace;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    background:var(--mist);
+    color:var(--ink);
+    font-family:var(--body);
+    font-weight:400;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+
+  /* ---------- Type scale (explicit) ----------
+     display-xl 88 / display-l 60 / h2 40 / lead 22 / body 17 / label 12 */
+  .label{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.28em;
+    text-transform:uppercase;
+    color:var(--slate);
+  }
+  .display-xl{ font-family:var(--display); font-weight:300; font-size:clamp(2.7rem,7vw,5.5rem); line-height:1.02; letter-spacing:-.02em; }
+  .display-l { font-family:var(--display); font-weight:300; font-size:clamp(2.1rem,4.6vw,3.75rem); line-height:1.05; letter-spacing:-.02em; }
+  .h2        { font-family:var(--display); font-weight:400; font-size:clamp(1.75rem,3.2vw,2.5rem); line-height:1.1; letter-spacing:-.01em; }
+  .lead      { font-size:clamp(1.05rem,1.6vw,1.375rem); color:var(--slate); font-weight:400; }
+  em.it{ font-style:italic; font-family:var(--display); }
+
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 32px; }
+
+  /* ---------- Nav ---------- */
+  header{
+    position:sticky; top:0; z-index:50;
+    backdrop-filter:saturate(140%) blur(10px);
+    background:rgba(244,242,236,0.72);
+    border-bottom:1px solid var(--line);
+  }
+  nav{ display:flex; align-items:center; justify-content:space-between; height:74px; }
+  .brand{ font-family:var(--display); font-weight:400; font-size:1.45rem; letter-spacing:.34em; padding-left:.34em; }
+  .navlinks{ display:flex; gap:38px; }
+  .navlinks a{ color:var(--ink); text-decoration:none; font-size:.95rem; opacity:.78; transition:opacity .2s; }
+  .navlinks a:hover{ opacity:1; }
+  .btn{
+    font-family:var(--body); font-size:.9rem; font-weight:500;
+    border:1px solid var(--ink); color:var(--ink); background:transparent;
+    padding:11px 22px; border-radius:999px; text-decoration:none;
+    transition:background .25s,color .25s; cursor:pointer; white-space:nowrap;
+  }
+  .btn:hover{ background:var(--ink); color:var(--mist); }
+  .btn-solid{ background:var(--ink); color:var(--mist); }
+  .btn-solid:hover{ background:var(--dawn); border-color:var(--dawn); color:var(--ink); }
+  .nav-mobile-cta{ display:none; }
+  @media(max-width:860px){
+    .navlinks{ display:none; }
+    .nav-mobile-cta{ display:inline-flex; }
+  }
+
+  /* ---------- Hero ---------- */
+  .hero{ position:relative; padding:clamp(56px,9vw,120px) 0 clamp(64px,8vw,104px); overflow:hidden; }
+  /* scenic interior photo — fades into the mist on the left so text stays crisp.
+     The gradient is the first (top) background layer, so if the photo fails to
+     load the scrim still renders and nothing looks broken. */
+  .hero-photo{
+    position:absolute; inset:0; z-index:0; pointer-events:none;
+    background:
+      linear-gradient(100deg, var(--mist) 0%, rgba(244,242,236,.92) 30%, rgba(244,242,236,.55) 55%, rgba(244,242,236,.15) 78%, rgba(244,242,236,.30) 100%),
+      url("https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1900&q=80") center/cover no-repeat,
+      var(--mist-deep);
+  }
+  /* atmospheric dawn gradient — the "air", floats above the photo */
+  .sky{
+    position:absolute; inset:-10% -10% auto -10%; height:120%;
+    background:
+      radial-gradient(120% 80% at 78% 8%, rgba(194,154,85,0.14), transparent 55%),
+      radial-gradient(110% 90% at 12% 0%, rgba(159,187,208,0.26), transparent 60%),
+      linear-gradient(180deg, rgba(159,187,208,0.12), rgba(244,242,236,0) 70%);
+    z-index:1; pointer-events:none;
+  }
+  .hero .wrap{ position:relative; z-index:2; }
+  .hero-grid{ display:grid; grid-template-columns:1.15fr .85fr; gap:56px; align-items:center; }
+  .hero h1{ margin:18px 0 0; max-width:14ch; }
+  .hero h1 .air{ color:var(--dawn); font-style:italic; }
+  .hero p.lead{ margin-top:26px; max-width:42ch; }
+  .hero-cta{ display:flex; gap:16px; margin-top:38px; flex-wrap:wrap; }
+  .hero-note{ margin-top:30px; display:flex; align-items:center; gap:12px; color:var(--slate); font-size:.9rem; }
+  .hero-note .dot{ width:8px; height:8px; border-radius:50%; background:#5AA66E; box-shadow:0 0 0 4px rgba(90,166,110,.18); }
+
+  /* device / readout card */
+  .readout{
+    background:linear-gradient(165deg,#1B1F24,#0E1115);
+    color:var(--mist); border-radius:22px; padding:30px 30px 26px;
+    box-shadow:0 30px 70px -30px rgba(22,25,29,.55);
+    position:relative; overflow:hidden;
+  }
+  .readout::after{
+    content:""; position:absolute; inset:0;
+    background:radial-gradient(80% 60% at 80% -10%, rgba(159,187,208,.22), transparent 60%);
+    pointer-events:none;
+  }
+  .readout .label{ color:rgba(244,242,236,.55); }
+  .aqi-num{ font-family:var(--display); font-weight:300; font-size:5.2rem; line-height:1; margin-top:6px; }
+  .aqi-sub{ color:rgba(244,242,236,.6); font-size:.92rem; margin-top:2px; }
+  .bars{ margin-top:26px; display:grid; gap:14px; }
+  .bar-row{ display:grid; grid-template-columns:64px 1fr 44px; align-items:center; gap:12px; font-size:.82rem; }
+  .bar-row .k{ font-family:var(--mono); color:rgba(244,242,236,.6); font-size:.72rem; }
+  .bar-track{ height:6px; border-radius:999px; background:rgba(244,242,236,.12); overflow:hidden; }
+  .bar-fill{ height:100%; border-radius:999px; background:linear-gradient(90deg,var(--altitude),var(--dawn)); animation:grow 1.6s cubic-bezier(.2,.8,.2,1) both; }
+  .bar-row .v{ text-align:right; color:var(--mist); font-variant-numeric:tabular-nums; }
+  @keyframes grow{ from{ transform:scaleX(0); transform-origin:left; } to{ transform:scaleX(1); } }
+
+  @media(max-width:860px){
+    .hero-grid{ grid-template-columns:1fr; gap:40px; }
+    .readout{ order:2; }
+  }
+
+  /* ---------- floating motes (subtle air motion) ---------- */
+  .mote{ position:absolute; border-radius:50%; background:var(--dawn); opacity:.5; z-index:1;
+         animation:drift linear infinite; }
+  @keyframes drift{
+    0%{ transform:translateY(20px) translateX(0); opacity:0; }
+    20%{ opacity:.6; }
+    100%{ transform:translateY(-120px) translateX(24px); opacity:0; }
+  }
+
+  /* ---------- Stats strip ---------- */
+  .strip{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .strip .wrap{ display:grid; grid-template-columns:repeat(3,1fr); }
+  .stat{ padding:46px 0; }
+  .stat:not(:last-child){ border-right:1px solid var(--line); }
+  .stat .n{ font-family:var(--display); font-weight:300; font-size:clamp(2.4rem,4vw,3.4rem); line-height:1; }
+  .stat .c{ color:var(--dawn); }
+  .stat .t{ margin-top:8px; }
+  @media(max-width:720px){
+    .strip .wrap{ grid-template-columns:1fr; }
+    .stat{ padding:30px 0; border-right:none !important; }
+    .stat:not(:last-child){ border-bottom:1px solid var(--line); }
+  }
+
+  /* ---------- Feature / value prop ---------- */
+  .feature{ padding:clamp(72px,11vw,140px) 0; }
+  .feature-head{ max-width:60ch; }
+  .feature-head h2{ margin-top:18px; }
+  .feature-head h2 .it{ color:var(--dawn); }
+  .cards{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:64px; }
+  .card{
+    background:var(--mist-deep); border:1px solid var(--line); border-radius:18px;
+    padding:30px; transition:transform .3s ease, box-shadow .3s ease;
+  }
+  .card:hover{ transform:translateY(-4px); box-shadow:0 24px 50px -28px rgba(22,25,29,.4); }
+  .card .ico{ width:44px; height:44px; color:var(--ink); }
+  .card h3{ font-family:var(--display); font-weight:400; font-size:1.4rem; margin:20px 0 10px; letter-spacing:-.01em; }
+  .card p{ color:var(--slate); font-size:1rem; }
+  @media(max-width:820px){ .cards{ grid-template-columns:1fr; } }
+
+  /* scenic showcase band */
+  .showcase{
+    margin-top:72px; position:relative; border-radius:22px; overflow:hidden;
+    min-height:clamp(280px,42vw,520px);
+    background:
+      linear-gradient(180deg, rgba(22,25,29,0) 35%, rgba(22,25,29,.72) 100%),
+      url("https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1900&q=80") center/cover no-repeat,
+      var(--mist-deep);
+    box-shadow:0 30px 70px -34px rgba(22,25,29,.5);
+    display:flex; align-items:flex-end;
+  }
+  .showcase .cap{ padding:clamp(26px,4vw,46px); color:var(--mist); max-width:46ch; }
+  .showcase .cap .label{ color:rgba(244,242,236,.7); }
+  .showcase .cap h3{ font-family:var(--display); font-weight:300; font-size:clamp(1.6rem,3vw,2.4rem); line-height:1.1; margin-top:10px; letter-spacing:-.01em; }
+
+  /* ---------- Closing CTA ---------- */
+  .closing{ position:relative; padding:clamp(90px,13vw,170px) 0; text-align:center; overflow:hidden; }
+  .closing .sky2{
+    position:absolute; inset:0;
+    background:
+      radial-gradient(70% 60% at 50% 120%, rgba(194,154,85,.18), transparent 60%),
+      radial-gradient(90% 80% at 50% -20%, rgba(159,187,208,.26), transparent 60%),
+      linear-gradient(180deg, rgba(244,242,236,.86), rgba(244,242,236,.78) 50%, rgba(244,242,236,.9) 100%),
+      url("https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1900&q=80") center/cover no-repeat,
+      var(--mist);
+    z-index:0;
+  }
+  .closing .wrap{ position:relative; z-index:2; }
+  .closing h2{ margin:0 auto; max-width:18ch; }
+  .closing .it{ color:var(--dawn); }
+  .closing p{ margin:22px auto 36px; max-width:44ch; }
+
+  /* ---------- Footer ---------- */
+  footer{ border-top:1px solid var(--line); padding:64px 0 48px; }
+  .foot-grid{ display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:32px; }
+  .foot-brand .brand{ padding-left:0; }
+  .foot-brand p{ color:var(--slate); margin-top:14px; font-size:.95rem; max-width:30ch; }
+  footer h4{ font-family:var(--mono); font-size:.72rem; letter-spacing:.22em; text-transform:uppercase; color:var(--slate); margin-bottom:16px; }
+  footer ul{ list-style:none; display:grid; gap:11px; }
+  footer a{ color:var(--ink); text-decoration:none; opacity:.8; font-size:.95rem; }
+  footer a:hover{ opacity:1; color:var(--dawn); }
+  .foot-base{ margin-top:52px; padding-top:24px; border-top:1px solid var(--line);
+    display:flex; justify-content:space-between; color:var(--slate); font-size:.82rem; flex-wrap:wrap; gap:10px; }
+  @media(max-width:820px){ .foot-grid{ grid-template-columns:1fr 1fr; } }
+  @media(max-width:520px){ .foot-grid{ grid-template-columns:1fr; } }
+
+  .reveal{ opacity:0; transform:translateY(18px); transition:opacity .7s ease, transform .7s ease; }
+  .reveal.in{ opacity:1; transform:none; }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="wrap">
+    <div class="brand">VAYUNE</div>
+    <div class="navlinks">
+      <a href="#">Home</a>
+      <a href="#system">System</a>
+      <a href="#evidence">Evidence</a>
+      <a href="#projects">Projects</a>
+      <a href="#philosophy">Philosophy</a>
+    </div>
+    <a href="#consult" class="btn">Private consultation</a>
+    <a href="#consult" class="btn btn-solid nav-mobile-cta">Consult</a>
+  </nav>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="hero-photo"></div>
+  <div class="sky"></div>
+  <div id="motes"></div>
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <span class="label">Architecture of Air</span>
+        <h1 class="display-xl">
+          Engineered air for homes that <span class="air">refuse to settle.</span>
+        </h1>
+        <p class="lead">
+          Vayune designs and installs whole-home air systems that hold your interior
+          atmosphere at a measured standard — clinically clean, silent, invisible.
+        </p>
+        <div class="hero-cta">
+          <a href="#consult" class="btn btn-solid">Book a private consultation</a>
+          <a href="#system" class="btn">See the system</a>
+        </div>
+        <div class="hero-note">
+          <span class="dot"></span>
+          Live across 40+ residences in Delhi, Mumbai &amp; Bengaluru
+        </div>
+      </div>
+
+      <!-- Live air-quality readout (illustrative mock data) -->
+      <div class="readout reveal">
+        <span class="label">Living room · now</span>
+        <div class="aqi-num">12<span style="font-size:1.6rem;color:var(--dawn);">AQI</span></div>
+        <div class="aqi-sub">Outside right now: 168 · Hazardous</div>
+        <div class="bars">
+          <div class="bar-row"><span class="k">PM1.0</span><span class="bar-track"><span class="bar-fill" style="width:91%"></span></span><span class="v">91%</span></div>
+          <div class="bar-row"><span class="k">PM2.5</span><span class="bar-track"><span class="bar-fill" style="width:95%"></span></span><span class="v">95%</span></div>
+          <div class="bar-row"><span class="k">PM10</span><span class="bar-track"><span class="bar-fill" style="width:96%"></span></span><span class="v">96%</span></div>
+          <div class="bar-row"><span class="k">VOC</span><span class="bar-track"><span class="bar-fill" style="width:88%"></span></span><span class="v">88%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STATS STRIP ============ -->
+<section class="strip">
+  <div class="wrap">
+    <div class="stat reveal"><div class="n">90<span class="c">%</span></div><div class="t label">of life is spent indoors</div></div>
+    <div class="stat reveal"><div class="n">2–5<span class="c">×</span></div><div class="t label">more pollutants inside</div></div>
+    <div class="stat reveal"><div class="n">18<span class="c"> hrs</span></div><div class="t label">average daily exposure</div></div>
+  </div>
+</section>
+
+<!-- ============ FEATURE / VALUE PROP ============ -->
+<section class="feature" id="system">
+  <div class="wrap">
+    <div class="feature-head reveal">
+      <span class="label">The system</span>
+      <h2 class="h2">You've curated every surface, every light, every line.
+        <span class="it">The air is the one thing you can't see — so we measure it.</span></h2>
+    </div>
+    <div class="cards">
+      <div class="card reveal">
+        <svg class="ico" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4">
+          <path d="M24 6c8 7 13 13 13 22a13 13 0 1 1-26 0c0-9 5-15 13-22Z"/>
+          <path d="M24 30a6 6 0 0 0 6-6" stroke-linecap="round"/>
+        </svg>
+        <h3>Three-stage filtration</h3>
+        <p>Medical-grade HEPA and activated carbon capture PM1.0 through PM10, VOCs and odour — verified down to the sub-micron.</p>
+      </div>
+      <div class="card reveal">
+        <svg class="ico" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4">
+          <rect x="8" y="10" width="32" height="22" rx="3"/>
+          <path d="M14 24l5-6 4 5 5-8 6 9" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M18 40h12M24 32v8" stroke-linecap="round"/>
+        </svg>
+        <h3>Always-on intelligence</h3>
+        <p>Sensors read every room continuously and tune output in real time. You see the same numbers we do — no marketing, just readings.</p>
+      </div>
+      <div class="card reveal">
+        <svg class="ico" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4">
+          <path d="M10 30c6-2 9-12 14-12s8 10 14 8" stroke-linecap="round"/>
+          <path d="M10 38c6-2 9-8 14-8s8 6 14 4" stroke-linecap="round" opacity=".55"/>
+          <circle cx="24" cy="12" r="3"/>
+        </svg>
+        <h3>Engineered to disappear</h3>
+        <p>Ducting, returns and units are designed into the architecture — silent under 24 dB, with nothing on the wall to apologise for.</p>
+      </div>
+    </div>
+
+    <div class="showcase reveal">
+      <div class="cap">
+        <span class="label">In residence · Himalayan foothills</span>
+        <h3>Floor-to-ceiling glass to the mountains — and the same purity of air on the inside.</h3>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CLOSING CTA ============ -->
+<section class="closing" id="consult">
+  <div class="sky2"></div>
+  <div class="wrap">
+    <span class="label reveal">Consultation</span>
+    <h2 class="display-l reveal" style="margin-top:18px;">The finest homes deserve the
+      <span class="it">finest atmosphere.</span></h2>
+    <p class="lead reveal">A private assessment of your home's air, with a system designed around its architecture — not retrofitted onto it.</p>
+    <a href="#" class="btn btn-solid reveal">Schedule your consultation</a>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <div class="brand">VAYUNE</div>
+        <p>Architecture of Air. Redefining what the inside of a home should feel like.</p>
+      </div>
+      <div>
+        <h4>Explore</h4>
+        <ul>
+          <li><a href="#system">System</a></li>
+          <li><a href="#evidence">Evidence</a></li>
+          <li><a href="#projects">Projects</a></li>
+          <li><a href="#philosophy">Philosophy</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Press</a></li>
+          <li><a href="#consult">Consultation</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="mailto:contact@vayune.in">contact@vayune.in</a></li>
+          <li><a href="#">LinkedIn</a></li>
+          <li><a href="#">Instagram</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-base">
+      <span>© 2026 Vayune. All rights reserved.</span>
+      <span>Delhi · Mumbai · Bengaluru</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // subtle floating "air" motes in the hero
+  (function(){
+    const host = document.getElementById('motes');
+    if(!host) return;
+    for(let i=0;i<14;i++){
+      const m = document.createElement('span');
+      m.className='mote';
+      const s = 2 + Math.random()*4;
+      m.style.width = m.style.height = s+'px';
+      m.style.left = Math.random()*100+'%';
+      m.style.top  = (40+Math.random()*55)+'%';
+      m.style.animationDuration = (7+Math.random()*9)+'s';
+      m.style.animationDelay = (-Math.random()*9)+'s';
+      host.appendChild(m);
+    }
+  })();
+
+  // reveal on scroll
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+  },{threshold:.15});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>
